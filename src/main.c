@@ -322,16 +322,6 @@ int CMD_mos_pwm(int argc, char *argv[]) {
 	on_percentage = atof(argv[2]);
 	pwm_selection = atoi(argv[3]);
 
-	if(on_percentage == 0.0) {
-		fprintf(stderr, "Selection out of range.\n");
-		return EXIT_ERR;
-	}
-
-	if(pwm_selection != MOS_N_HTR_1 && pwm_selection != MOS_N_HTR_2 && pwm_selection != MOS_N_HTR_3) {
-		fprintf(stderr, "No heater for selected range.\n");
-		return EXIT_ERR;
-	}
-
 	if(on_percentage > 0.0 && on_percentage < 100.0) {
 		float on_time = on_time = on_percentage * CYCLE_ITTERATION_UTIME / 100.0;
 		float  off_time = off_time = CYCLE_ITTERATION_UTIME - on_time;
