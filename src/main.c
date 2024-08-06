@@ -25,10 +25,6 @@ test Pi main.c:
 // exit codes
 #define EXIT_OK 0
 #define EXIT_ERR -1
-#define EXIT_ERR_CMD_NOT_FOUND -2
-#define EXIT_ERR_NO_OPTIONS -3
-#define EXIT_ERR_INVALID_OPTION -4
-#define EXIT_ERR_RELAY_USED_LIFTER -5
 
 // assign light lifter comm pins to relays
 #define RELAY_N_LIFTER_K1 1
@@ -189,7 +185,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	fprintf(stderr, MSG_CMD_NOT_FOUND);
-	return EXIT_ERR_CMD_NOT_FOUND;
+	return EXIT_ERR;
 }
 
 int CMD_help(int argc, char *argv[]) {
@@ -205,7 +201,7 @@ int CMD_lifters(int argc, char *argv[]) {
 
 	if(argc < 3) {
 		fprintf(stderr, MSG_CMD_NO_OPTIONS);
-		return EXIT_ERR_NO_OPTIONS;
+		return EXIT_ERR;
 	}
 
 	unsigned char k1_val = 0, k2_val = 0, k3_val = 0, k4_val = 0;
@@ -254,7 +250,7 @@ int CMD_lifters(int argc, char *argv[]) {
 	}
 	else {
 		fprintf(stderr, MSG_ERR_INVALID_OPTION);
-		return EXIT_ERR_INVALID_OPTION;
+		return EXIT_ERR;
 	}
 
 	// read current relays pos
@@ -297,17 +293,17 @@ int CMD_relays(int argc, char *argv[]) {
 	}
 	else if(argc < 4) {
 		fprintf(stderr, MSG_CMD_NO_OPTIONS);
-		return EXIT_ERR_NO_OPTIONS;
+		return EXIT_ERR;
 	}
 	target_relay = atoi(argv[2]);
 	// printf("target relay: %d\ntarget action: %s\n", target_relay, argv[3]);
 	if(target_relay == RELAY_N_LIFTER_K1 || target_relay == RELAY_N_LIFTER_K2 || target_relay == RELAY_N_LIFTER_K3 || target_relay == RELAY_N_LIFTER_K4) {
 		fprintf(stderr, MSG_ERR_RELAY_USED_LIFTERS);
-		return EXIT_ERR_RELAY_USED_LIFTER;
+		return EXIT_ERR;
 	}
 	if(!(!strcmp(argv[3], "on") || !strcmp(argv[3], "off"))) { // check for anything but "on" or "off" options
 		fprintf(stderr, MSG_ERR_INVALID_OPTION);
-		return EXIT_ERR_INVALID_OPTION;
+		return EXIT_ERR;
 	}
 	sprintf(temp, "16relind 0 write %d %s\0", target_relay, argv[3]);
 	system((char *)temp); // send command
@@ -324,7 +320,7 @@ int CMD_mosfets(int argc, char *argv[]) {
 	}
 	else if(argc < 4) {
 		fprintf(stderr, MSG_CMD_NO_OPTIONS);
-		return EXIT_ERR_NO_OPTIONS;
+		return EXIT_ERR;
 	}
 	target_mosfet = atoi(argv[2]);
 
@@ -334,7 +330,7 @@ int CMD_mosfets(int argc, char *argv[]) {
 	}
 	if(!(!strcmp(argv[3], "on") || !strcmp(argv[3], "off"))) { // check for anything but "on" or "off" options
 		fprintf(stderr, MSG_ERR_INVALID_OPTION);
-		return EXIT_ERR_INVALID_OPTION;
+		return EXIT_ERR;
 	}
 	sprintf(temp, "8mosind 1 write %d %s\0", target_mosfet, argv[3]);
 	system((char *)temp); // send command
@@ -346,7 +342,7 @@ int CMD_mos_pwm(int argc, char *argv[]) {
 
 	if(argc < 4) {
 		fprintf(stderr, MSG_CMD_NO_OPTIONS);
-		return EXIT_ERR_NO_OPTIONS;
+		return EXIT_ERR;
 	}
 
 	float on_percentage = 0.0;
