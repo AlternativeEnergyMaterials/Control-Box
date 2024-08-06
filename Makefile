@@ -13,9 +13,9 @@ LDFLAGS	= -L$(DESTDIR)$(PREFIX)/lib
 
 SRC	=	src/main.c
 OBJ	=	$(SRC:.c=.o)
-all:	AEM-CB
+all:	aem-cb
 
-AEM-CB:	$(OBJ)
+aem-cb:	$(OBJ)
 	$Q echo [Link]
 	$Q $(CC) -o $@ $(OBJ) $(LDFLAGS) $(LIBS)
 
@@ -26,15 +26,15 @@ AEM-CB:	$(OBJ)
 .PHONY:	clean
 clean:
 	$Q echo "[Clean]"
-	$Q rm -f $(OBJ) AEM-CB *~ core tags *.bak
+	$Q rm -f $(OBJ) aem-cb *~ core tags *.bak
 
 .PHONY:	install
-install: AEM-CB
+install: aem-cb
 	$Q echo "[Install]"
-	$Q cp AEM-CB		$(DESTDIR)$(PREFIX)/bin
+	$Q cp aem-cb		$(DESTDIR)$(PREFIX)/bin
 
 .PHONY:	uninstall
 uninstall:
 	$Q echo "[UnInstall]"
-	$Q rm -f $(DESTDIR)$(PREFIX)/bin/AEM-CB
-	$Q rm -f $(DESTDIR)$(PREFIX)/man/man1/AEM-CB.1
+	$Q rm -f $(DESTDIR)$(PREFIX)/bin/aem-cb
+	$Q rm -f $(DESTDIR)$(PREFIX)/man/man1/aem-cb.1
