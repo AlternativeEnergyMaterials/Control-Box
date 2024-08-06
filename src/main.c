@@ -50,6 +50,9 @@ test Pi main.c:
 #define CYCLE_ITTERATION_UTIME 100000
 #define ITTERATIONS_PER_CYCLE 10
 
+#define BOARD_RELAYS 0
+#define BOARD_MOSFET 1
+
 // cli command struct
 typedef struct {
 	const char* name;
@@ -131,7 +134,7 @@ int read_relay_pos() {
 int read_mosfet_pos() {
 	FILE *fp;
 	char temp[512];
-	if (!(fp = popen("8mosind 0 read", "r"))) {
+	if (!(fp = popen("8mosind 1 read", "r"))) {
 		printf("Failed to read MOSFETs.\n");
 		return 1;
 	}
@@ -303,7 +306,7 @@ int CMD_mosfets(int argc, char *argv[]) {
 		fprintf(stderr, MSG_ERR_INVALID_OPTION);
 		return EXIT_ERR_INVALID_OPTION;
 	}
-	sprintf(temp, "8mosind 0 write %d %s\0", target_mosfet, argv[3]);
+	sprintf(temp, "8mosind 1 write %d %s\0", target_mosfet, argv[3]);
 	system((char *)temp); // send command
 	return EXIT_OK;
 }
@@ -328,14 +331,14 @@ int CMD_mos_pwm(int argc, char *argv[]) {
 
 		for(int i = 0; i < ITTERATIONS_PER_CYCLE; ++i) {
 			// enable MOSFET
-			sprintf(temp, "8mosind 1 write %d on", pwm_selection);
+			sprintf(temp, "8mosind %d write %d on", BOARD_MOSFET, pwm_selection);
 			system((char *)temp);
 
 			// sleep for on time
 			usleep(on_time);
 
 			// disable MOSFET
-			sprintf(temp, "8mosind 1 write %d off", pwm_selection);
+			sprintf(temp, "8mosind %d write %d off", BOARD_MOSFET, pwm_selection);
 			system((char *)temp);
 
 			// sleep for off time
@@ -344,14 +347,14 @@ int CMD_mos_pwm(int argc, char *argv[]) {
 	}
 	else if (on_percentage >= 100) {
 		// enable MOSFET
-		sprintf(temp, "8mosind 1 write %d on", pwm_selection);
+		sprintf(temp, "8mosind %d write %d on", BOARD_MOSFET, pwm_selection);
 		system((char *)temp);
 		// sleep for ITTERATIONS * ITTERATION time
 		usleep(ITTERATIONS_PER_CYCLE * CYCLE_ITTERATION_UTIME);
 	}
 
 	// disable MOSFET
-	sprintf(temp, "8mosind 1 write %d off", pwm_selection);
+	sprintf(temp, "8mosind %d write %d off", BOARD_MOSFET, pwm_selection);
 	system((char *)temp);
 }
 
