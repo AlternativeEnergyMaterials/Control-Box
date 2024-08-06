@@ -50,8 +50,10 @@ test Pi main.c:
 #define CYCLE_ITTERATION_UTIME 100000
 #define ITTERATIONS_PER_CYCLE 10
 
+// misc constants
 #define BOARD_RELAYS 0
 #define BOARD_MOSFET 1
+#define MV_CUTOFF 0.01
 
 // cli command struct
 typedef struct {
@@ -141,6 +143,34 @@ int read_mosfet_pos() {
 	fgets(temp, sizeof(temp), fp);
 	pclose(fp);
 	return  atoi(temp);
+}
+
+float readmv(board_id, tc_id) {
+	FILE *fp;
+	char temp[512];
+	sprintf(temp, "smtc %d readmv %d", board_id, tc_id);
+	
+	if (!(fp = popen(temp, "r"))) {
+		fprintf("Failed to read thermocouple [%d, %d] voltage.\n", board_id, tc_id);
+		return 1;
+	}
+	fgets(temp, sizeof(temp), fp);
+	pclose(fp);
+	return atof(temp);
+}
+
+float readtc(board_id, tc_id) {
+	FILE *fp;
+	char temp[512];
+	sprintf(temp, "smtc %d read %d", board_id, tc_id);
+	
+	if (!(fp = popen(temp, "r"))) {
+		fprintf("Failed to read thermocouple [%d, %d].\n", board_id, tc_id);
+		return 1;
+	}
+	fgets(temp, sizeof(temp), fp);
+	pclose(fp);
+	return atof(temp);
 }
 
 int main(int argc, char* argv[]) {
@@ -359,16 +389,18 @@ int CMD_mos_pwm(int argc, char *argv[]) {
 }
 
 int CMD_read_tc(int argc, char *argv[]) {
-	char temp[512];
+	float tc_temps[2][8] = { {0.0} };
 
-	if(argc == 2) {
-		printf("Thermocouples:");
-		// TODO: read all thermocouples here
-		return EXIT_OK;
+	for(int board_id = 0; board_id < 2; board_id++) {
+		for (int tc_id = 1; tc_id <= 8; tc_id++) {
+			float mv = readmv(board_id, tc_id);
+			if(mv >= MV_CUTOFF) {
+				tc_temps[board_id][tc_id] = readtc(board_id, tc_id);
+			}
+			else {
+				tc_temps[board_id][tc_id] = 2100.0;
+			}
+		}
 	}
-
-	// sprintf(temp, "8mosind 0 write %d %s\0", target_mosfet, argv[3]);
-	// system((char *)temp); // send command
-
 	return EXIT_OK;
 }
