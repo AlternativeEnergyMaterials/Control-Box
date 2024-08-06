@@ -323,25 +323,23 @@ int CMD_mos_pwm(int argc, char *argv[]) {
 	pwm_selection = atoi(argv[3]);
 
 	if(on_percentage > 0.0 && on_percentage < 100.0) {
-		float on_time = on_time = on_percentage * CYCLE_ITTERATION_UTIME / 100.0;
-		float  off_time = off_time = CYCLE_ITTERATION_UTIME - on_time;
+		float on_time = on_percentage * CYCLE_ITTERATION_UTIME / 100.0;
+		float off_time = CYCLE_ITTERATION_UTIME - on_time;
 
 		for(int i = 0; i < ITTERATIONS_PER_CYCLE; ++i) {
 			// enable MOSFET
 			sprintf(temp, "8mosind 1 write %d on", pwm_selection);
-			// printf("sending command: \"%s\"\n", (char*)temp);
 			system((char *)temp);
 
 			// sleep for on time
-			usleep(on_time * 1000000.0);
+			usleep(on_time);
 
 			// disable MOSFET
 			sprintf(temp, "8mosind 1 write %d off", pwm_selection);
-			// printf("sending command: \"%s\"\n", (char*)temp);
 			system((char *)temp);
 
 			// sleep for off time
-			usleep(off_time * 1000000.0);
+			usleep(off_time);
 		}
 	}
 	else if (on_percentage >= 100) {
@@ -349,6 +347,7 @@ int CMD_mos_pwm(int argc, char *argv[]) {
 		sprintf(temp, "8mosind 1 write %d on", pwm_selection);
 		system((char *)temp);
 		// sleep for ITTERATIONS * ITTERATION time
+		usleep(ITTERATIONS_PER_CYCLE * CYCLE_ITTERATION_UTIME);
 	}
 
 	// disable MOSFET
