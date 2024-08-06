@@ -95,7 +95,7 @@ int CMD_mos_pwm(int argc, char *argv[]);
 const CliCmdType CMD_MOS_PWM = {
 	"pwm",
 	"Produces a pwm signal on the desired mosfet",
-	"(float)percentage, (int)mosfet numer",
+	"percentage: float[0.0,100.0], mosfet num: int[1,8]",
 	&CMD_mos_pwm,
 };
 
@@ -103,7 +103,7 @@ int CMD_read_tc(int argc, char *argv[]);
 const CliCmdType CMD_READ_TC = {
 	"read-tc",
 	"Reads thermocouples",
-	"none | (board:int[1,2], channel:int[1,8])",
+	"board:int[1,2], channel:int[1,8]",
 	&CMD_read_tc,
 };
 
