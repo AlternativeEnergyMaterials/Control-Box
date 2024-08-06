@@ -36,20 +36,17 @@ test Pi main.c:
 // #define RELAY_N_LIFTER_UP 5
 // #define RELAY_N_LIFTER_DN 6
 
-// assign heaters to MOSFETs
-#define MOS_N_HTR_1 1
-#define MOS_N_HTR_2 2
-#define MOS_N_HTR_3 3
-
 // define misc constants
 #define USLEEP_MOMENTARY_DELAY 100000
 #define CYCLE_ITTERATION_UTIME 100000
 #define ITTERATIONS_PER_CYCLE 10
 
+// thermocouple voltage sense cutoff
+#define MV_CUTOFF 0.01
+
 // misc constants
 #define BOARD_RELAYS 0
 #define BOARD_MOSFET 1
-#define MV_CUTOFF 0.01
 
 // cli command struct
 typedef struct {
@@ -104,7 +101,7 @@ int CMD_read_tc(int argc, char *argv[]);
 const CliCmdType CMD_READ_TC = {
 	"read-tc",
 	"Reads thermocouples",
-	"board:int[1,2], channel:int[1,8]",
+	"none | (board:int[1,2], channel:int[1,8])",
 	&CMD_read_tc,
 };
 
@@ -384,19 +381,36 @@ int CMD_mos_pwm(int argc, char *argv[]) {
 	system((char *)temp);
 }
 
+int read_single_tc(float tc_temps[2][8], int board_id, int tc_id) {
+	float mv = readmv(board_id, tc_id);
+	if(mv >= MV_CUTOFF) {
+		tc_temps[board_id][tc_id] = readtc(board_id, tc_id);
+	}
+	else {
+		tc_temps[board_id][tc_id] = 2100.0;
+	}
+}
+
 int CMD_read_tc(int argc, char *argv[]) {
 	float tc_temps[2][8] = { {0.0} };
 
-	for(int board_id = 0; board_id < 2; board_id++) {
-		for (int tc_id = 1; tc_id <= 8; tc_id++) {
-			float mv = readmv(board_id, tc_id);
-			if(mv >= MV_CUTOFF) {
-				tc_temps[board_id][tc_id] = readtc(board_id, tc_id);
-			}
-			else {
-				tc_temps[board_id][tc_id] = 2100.0;
+	if(argc == 2) {
+		for(int board_id = 0; board_id < 2; board_id++) {
+			for (int tc_id = 1; tc_id <= 8; tc_id++) {
+				read_single_tc(tc_temps, board_id, tc_id);
+				printf("%.3f\n", tc_temps[board_id][tc_id]);
 			}
 		}
+		return EXIT_OK;
 	}
-	return EXIT_OK;
+
+	if(argc==4) {
+		int board_id = atoi(argv[2]);
+		int tc_id = atoi(argv[3]);
+		read_single_tc(tc_temps, board_id, tc_id);
+		printf("%.3f\n", tc_temps[board_id][tc_id]);
+		return EXIT_OK;
+	}
+
+	return EXIT_ERR;
 }
