@@ -321,10 +321,6 @@ int CMD_mosfets(int argc, char *argv[]) {
 	}
 	target_mosfet = atoi(argv[2]);
 
-	if(target_mosfet == MOS_N_HTR_1 || target_mosfet == MOS_N_HTR_2 || target_mosfet == MOS_N_HTR_3) {
-		fprintf(stderr, "Error: MOSFET used for heater.\n");
-		return EXIT_ERR;
-	}
 	if(!(!strcmp(argv[3], "on") || !strcmp(argv[3], "off"))) { // check for anything but "on" or "off" options
 		fprintf(stderr, MSG_ERR_INVALID_OPTION);
 		return EXIT_ERR;
