@@ -6,7 +6,6 @@ test Pi main.c:
   - blocks direct changes to lifter relays
   - provides an api to control the lifters
 	- contains command definitions and implimentations
-	- created May 30
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,11 +30,20 @@ test Pi main.c:
 #define EXIT_ERR_INVALID_OPTION -4
 #define EXIT_ERR_RELAY_USED_LIFTER -5
 
-// assign lifter comm pins to relays
+// assign light lifter comm pins to relays
 #define RELAY_N_LIFTER_K1 1
 #define RELAY_N_LIFTER_K2 2
 #define RELAY_N_LIFTER_K3 3
 #define RELAY_N_LIFTER_K4 4
+
+// assign heavy lifter comm pins to relays
+// #define RELAY_N_LIFTER_UP 5
+// #define RELAY_N_LIFTER_DN 6
+
+// assign heaters to MOSFETs
+#define MOS_N_HTR_1 1
+#define MOS_N_HTR_2 2
+#define MOS_N_HTR_3 3
 
 // define misc constants
 #define USLEEP_MOMENTARY_DELAY 100000
@@ -45,42 +53,65 @@ test Pi main.c:
 // cli command struct
 typedef struct {
 	const char* name;
+	const char* desc;
+	const char* usage;
 	int (*cmd_func)(int,char**);
-	const char* help;
 } CliCmdType;
 
 // define cli commands
 int CMD_help(int argc, char *argv[]);
 const CliCmdType CMD_HELP = {
 	"help",
+	"Displays the list of available commands",
+	"none",
 	&CMD_help,
-	"Displays the list of available commands.\n\tNo options.",
 };
 
 int CMD_lifters(int argc, char *argv[]);
 const CliCmdType CMD_LIFTERS = {
 	"lifters",
+	"Controls the lifters",
+	"up | down | stop | 1 | 2 | 3 | 4",
 	&CMD_lifters,
-	"Controls the lifters.\n\tOptions: non-momentary:\n\t\"up\", \"down\", \"stop\"\n\tmomentary:\n\t\"set_upper_limit\", \"set_lower_limit\", \"clear_limits\", \"1\", \"2\", \"3\", \"4\"",
 };
 
 int CMD_relays(int argc, char *argv[]);
 const CliCmdType CMD_RELAYS = {
 	"relays",
+	"Controls the relays, locks lifter relays",
+	"none | (channel:int[1,16], on | off )",
 	&CMD_relays,
-	"Controls the relays.\n\tLocks lifter relays.\n\tOptions:\n\tno options: gets current position of relays.\n\trelay numer and \"on\" or \"off\" turns the relay on or off.",
+};
+
+int CMD_mosfets(int argc, char *argv[]);
+const CliCmdType CMD_MOSFETS = {
+	"mosfets",
+	"Controls the MOSFETs, locks heater MOSFETs",
+	"none | (channel:int[1,8], on | off )",
+	&CMD_mosfets,
 };
 
 int CMD_mos_pwm(int argc, char *argv[]);
 const CliCmdType CMD_MOS_PWM = {
 	"pwm",
+	"Produces a pwm signal on the desired mosfet",
+	"(float)percentage, (int)mosfet numer",
 	&CMD_mos_pwm,
-	"Produces a pwm signal on the desired mosfet.\n\tOptions:\n\t(float)percentage, (int)mosfet numer.",
+};
+
+int CMD_read_tc(int argc, char *argv[]);
+const CliCmdType CMD_READ_TC = {
+	"read-tc",
+	"Reads thermocouples",
+	"none | (board:int[1,2], channel:int[1,8])",
+	&CMD_read_tc,
 };
 
 // define list of commands
 const CliCmdType *CMD_ARR[] = {
-	&CMD_HELP, &CMD_LIFTERS, &CMD_RELAYS, &CMS_MOS_PWM, NULL
+	&CMD_HELP, &CMD_LIFTERS, &CMD_RELAYS,
+	&CMD_MOSFETS, &CMD_MOS_PWM, &CMD_READ_TC,
+	NULL
 };
 
 // util functions
@@ -90,6 +121,18 @@ int read_relay_pos() {
 	char temp[512];
 	if (!(fp = popen("16relind 0 read", "r"))) {
 		printf("Failed to read relays.\n");
+		return 1;
+	}
+	fgets(temp, sizeof(temp), fp);
+	pclose(fp);
+	return  atoi(temp);
+}
+
+int read_mosfet_pos() {
+	FILE *fp;
+	char temp[512];
+	if (!(fp = popen("8mosind 0 read", "r"))) {
+		printf("Failed to read MOSFETs.\n");
 		return 1;
 	}
 	fgets(temp, sizeof(temp), fp);
@@ -117,9 +160,9 @@ int main(int argc, char* argv[]) {
 }
 
 int CMD_help(int argc, char *argv[]) {
-	printf("Available commands:\n\n");
+	printf("Available commands:\n");
 	for(int i = 0; CMD_ARR[i]; ++i) {
-		printf("\t\"%s\" - %s\n\n", CMD_ARR[i]->name, CMD_ARR[i]->help);
+		printf("\t%s [%s]: %s\n", CMD_ARR[i]->name, CMD_ARR[i]->usage, CMD_ARR[i]->desc);
 	}
 }
 
@@ -147,7 +190,7 @@ int CMD_lifters(int argc, char *argv[]) {
   m    | 0   1   1   1 |
        +---------------+
   */
-  
+
 	if(!strcmp(argv[2], "up")) {
 		momentary_input = 0;
 		k1_val = 0; k2_val = 0; k3_val = 1; k4_val = 0;
@@ -176,24 +219,6 @@ int CMD_lifters(int argc, char *argv[]) {
 		momentary_input = 1;
 		k1_val = 0; k2_val = 1; k3_val = 0; k4_val = 1;
 	}
-	/*
-	else if(!strcmp(argv[2], "m")) {
-		momentary_input = 1;
-		k1_val = 1; k2_val = 1; k3_val = 1; k4_val = 0;
-	}
-	*/
-	// TODO: impliment upper limit
-	else if(!strcmp(argv[2], "set_upper_limit")) {
-		k1_val = 0; k2_val = 0; k3_val = 0; k4_val = 0;
-	}
-	// TODO: impliment lower limit
-	else if(!strcmp(argv[2], "set_lower_limit")) {
-		k1_val = 0; k2_val = 0; k3_val = 0; k4_val = 0;
-	}
-	// TODO: impliment clearing limits
-	else if(!strcmp(argv[2], "clear_limits")) {
-		k1_val = 0; k2_val = 0; k3_val = 0; k4_val = 0;
-	}
 	else {
 		fprintf(stderr, MSG_ERR_INVALID_OPTION);
 		return EXIT_ERR_INVALID_OPTION;
@@ -213,7 +238,7 @@ int CMD_lifters(int argc, char *argv[]) {
 	relay_selection |= k4_val << (RELAY_N_LIFTER_K4 - 1);
 	// send to relays
 	sprintf(temp, "16relind 0 write %d", relay_selection);
-	printf("sending \"%s\"\n", (char*)temp);
+	// printf("sending \"%s\"\n", (char*)temp);
 	system((char *)temp);
 
 	// unlatch for momentary commands
@@ -224,7 +249,7 @@ int CMD_lifters(int argc, char *argv[]) {
 		relay_selection &= ~(1 << (RELAY_N_LIFTER_K3 - 1));
 		relay_selection &= ~(1 << (RELAY_N_LIFTER_K4 - 1));
 		sprintf(temp, "16relind 0 write %d", relay_selection);
-		printf("sending unlatch command: \"%s\"\n", (char*)temp);
+		// printf("sending unlatch command: \"%s\"\n", (char*)temp);
 		system((char *)temp);
 	}
 }
@@ -251,40 +276,107 @@ int CMD_relays(int argc, char *argv[]) {
 		fprintf(stderr, MSG_ERR_INVALID_OPTION);
 		return EXIT_ERR_INVALID_OPTION;
 	}
-	sprintf(temp, "16relind 0 write %d %s", target_relay, argv[3]);
+	sprintf(temp, "16relind 0 write %d %s\0", target_relay, argv[3]);
+	system((char *)temp); // send command
+	return EXIT_OK;
+}
+
+int CMD_mosfets(int argc, char *argv[]) {
+	char temp[512];
+	unsigned int target_mosfet;
+
+	if(argc == 2) {
+		printf("MOSFETs current pos: %d\n", read_mosfet_pos());
+		return EXIT_OK;
+	}
+	else if(argc < 4) {
+		fprintf(stderr, MSG_CMD_NO_OPTIONS);
+		return EXIT_ERR_NO_OPTIONS;
+	}
+	target_mosfet = atoi(argv[2]);
+
+	if(target_mosfet == MOS_N_HTR_1 || target_mosfet == MOS_N_HTR_2 || target_mosfet == MOS_N_HTR_3) {
+		fprintf(stderr, "Error: MOSFET used for heater.\n");
+		return EXIT_ERR;
+	}
+	if(!(!strcmp(argv[3], "on") || !strcmp(argv[3], "off"))) { // check for anything but "on" or "off" options
+		fprintf(stderr, MSG_ERR_INVALID_OPTION);
+		return EXIT_ERR_INVALID_OPTION;
+	}
+	sprintf(temp, "8mosind 0 write %d %s\0", target_mosfet, argv[3]);
 	system((char *)temp); // send command
 	return EXIT_OK;
 }
 
 int CMD_mos_pwm(int argc, char *argv[]) {
+	char temp[512];
+
 	if(argc < 4) {
 		fprintf(stderr, MSG_CMD_NO_OPTIONS);
 		return EXIT_ERR_NO_OPTIONS;
 	}
 
-	// TODO: parse for inputs
 	float on_percentage = 0.0;
-	int mos_num = 0;
+	int pwm_selection = 0;
+
+	on_percentage = atof(argv[2]);
+	pwm_selection = atoi(argv[3]);
+
+	if(on_percentage == 0.0) {
+		fprintf(stderr, "Selection out of range.\n");
+		return EXIT_ERR;
+	}
+
+	if(pwm_selection != MOS_N_HTR_1 && pwm_selection != MOS_N_HTR_2 && pwm_selection != MOS_N_HTR_3) {
+		fprintf(stderr, "No heater for selected range.\n");
+		return EXIT_ERR;
+	}
 
 	if(on_percentage > 0.0 && on_percentage < 100.0) {
-		float on_time = on_time = on_percentage * CYCLE_ITERATION_TIME / 100.0;
-		float  off_time = off_time = CYCLE_ITERATION_TIME - on_time;
+		float on_time = on_time = on_percentage * CYCLE_ITTERATION_UTIME / 100.0;
+		float  off_time = off_time = CYCLE_ITTERATION_UTIME - on_time;
 
 		for(int i = 0; i < ITTERATIONS_PER_CYCLE; ++i) {
 			// enable MOSFET
+			sprintf(temp, "8mosind 0 write %d on", pwm_selection);
+			// printf("sending command: \"%s\"\n", (char*)temp);
+			system((char *)temp);
+
 			// sleep for on time
+			usleep(on_time * 1000000.0);
+
 			// disable MOSFET
+			sprintf(temp, "8mosind 0 write %d off", pwm_selection);
+			// printf("sending command: \"%s\"\n", (char*)temp);
+			system((char *)temp);
+
 			// sleep for off time
+			usleep(off_time * 1000000.0);
 		}
 	}
 	else if (on_percentage >= 100) {
 		// enable MOSFET
-		// sleep for ITTERATIONS * ITTERATION time
-	}
-	else {
-		// disable MOSFET
+		sprintf(temp, "8mosind 0 write %d on", pwm_selection);
+		system((char *)temp);
 		// sleep for ITTERATIONS * ITTERATION time
 	}
 
-        // disable MOSFET
+	// disable MOSFET
+	sprintf(temp, "8mosind 0 write %d off", pwm_selection);
+	system((char *)temp);
+}
+
+int CMD_read_tc(int argc, char *argv[]) {
+	char temp[512];
+
+	if(argc == 2) {
+		printf("Thermocouples:");
+		// TODO: read all thermocouples here
+		return EXIT_OK;
+	}
+
+	// sprintf(temp, "8mosind 0 write %d %s\0", target_mosfet, argv[3]);
+	// system((char *)temp); // send command
+
+	return EXIT_OK;
 }
