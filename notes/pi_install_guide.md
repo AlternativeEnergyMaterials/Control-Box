@@ -11,6 +11,13 @@ sudo apt update && sudo apt upgrade -y
 # Enable I2C
 sudo raspi-config nonint do_i2c 0
 sudo modprobe i2c-dev
+
+# Update Wired connection ipv4 method
+sudo nmcli c m "Wired connection 1" ipv4.method link-local
+# Now disconnect and unplug and replug the ethernet cable
+# Verify the connection
+nmcli c show "Wired connection 1" | grep ipv4.method
+# You should see "link-local"
 ```
 
 ## Install needed libraries
